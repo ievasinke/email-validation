@@ -14,7 +14,21 @@ use Mailgun\Mailgun;
 
 $appKeyValidation = getenv("API_KEY_EMAIL");
 $emailToValidate = (string)readline("Enter the email address for validation: ");
-$data = file_get_contents("https://api.emailvalidation.io/v1/info?apikey=$appKeyValidation&email=$emailToValidate");
+$emailUrl = "https://api.emailvalidation.io/v1/info?apikey=$appKeyValidation&email=$emailToValidate";
+
+$contextOptions = [
+    "http" => [
+        "ignore_errors" => true,
+    ],
+];
+$context = stream_context_create($contextOptions);
+$data = file_get_contents($emailUrl, false, $context);
+$http_response_header = $http_response_header ?? [];
+
+if (strpos($http_response_header[0], '200') === false) {
+    exit ("Error: Failed to fetch data. HTTP Response: " . $http_response_header[0] . "\n");
+}
+
 $emailsData = json_decode($data);
 $apiKeyMailgun = getenv("API_KEY_MAILGUN");
 $domain = "sandbox139eb76be3f444ad90f13165a0df1cf0.mailgun.org";
@@ -32,5 +46,7 @@ if ($emailsData->format_valid) {
         ]);
     } catch (\Mailgun\Exception\HttpClientException $e) {
         echo "Mailgun API Exception: " . $e->getMessage();
+    } catch (\Psr\Http\Client\ClientExceptionInterface $e) {
+        echo "Mailgun API Exception Interface: " . $e->getMessage();
     }
 }
